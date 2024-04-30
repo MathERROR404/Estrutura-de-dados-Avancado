@@ -1,0 +1,361 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <locale.h>
+
+// Aluno : Mateus Gomes Portela
+// Matricula: 1190200744
+
+// Definição da estrutura de produto
+typedef struct
+{
+  int codigo;
+  char numero_serie[51];
+  char data_validade[11]; // Formato: DD/MM/AAAA
+} Produto;
+
+// Definição da estrutura de Heap mínimo
+typedef struct
+{
+  Produto *itens;
+  int tamanho;
+  int capacidade;
+} HeapMin;
+
+// Função para inicializar o Heap mínimo
+HeapMin *inicializarHeapMin(int capacidade)
+{
+  HeapMin *heap = (HeapMin *)malloc(sizeof(HeapMin));
+  heap->itens = (Produto *)malloc(capacidade * sizeof(Produto)); // Corrigido
+  heap->tamanho = 0;
+  heap->capacidade = capacidade;
+  return heap;
+}
+
+// Função para inserir um produto no Heap mínimo
+void inserirProduto(HeapMin *heap, Produto produto)
+{
+  int indice = heap->tamanho;
+  heap->itens[indice] = produto;
+  heap->tamanho++;
+
+  // Corrigir a ordem do heap para manter a propriedade de heap mínimo
+  while (indice > 0 && strcmp(heap->itens[(indice - 1) / 2].data_validade, heap->itens[indice].data_validade) > 0)
+  {
+    // Trocar pai e filho
+    Produto temp = heap->itens[(indice - 1) / 2];
+    heap->itens[(indice - 1) / 2] = heap->itens[indice];
+    heap->itens[indice] = temp;
+
+    indice = (indice - 1) / 2;
+  }
+}
+
+// Função para remover o produto com a data de validade mais próxima do atual
+Produto removerProduto(HeapMin *heap)
+{
+  if (heap->tamanho == 0)
+  {
+    printf("Heap vazio, impossivel remover.\n");
+    exit(1);
+  }
+
+  Produto produto_removido = heap->itens[0];
+  heap->itens[0] = heap->itens[heap->tamanho - 1];
+  heap->tamanho--;
+
+  // Corrigir a ordem do heap após a remoção
+  int indice = 0;
+  while (1)
+  {
+    int filho_esquerdo = 2 * indice + 1;
+    int filho_direito = 2 * indice + 2;
+    int menor = indice;
+
+    if (filho_esquerdo < heap->tamanho && strcmp(heap->itens[filho_esquerdo].data_validade, heap->itens[indice].data_validade) < 0)
+      menor = filho_esquerdo;
+    if (filho_direito < heap->tamanho && strcmp(heap->itens[filho_direito].data_validade, heap->itens[menor].data_validade) < 0)
+      menor = filho_direito;
+
+    if (menor != indice)
+    {
+      // Trocar pai e menor filho
+      Produto temp = heap->itens[indice];
+      heap->itens[indice] = heap->itens[menor];
+      heap->itens[menor] = temp;
+
+      indice = menor;
+    }
+    else
+    {
+      break;
+    }
+  }
+
+  return produto_removido;
+}
+
+// Função para buscar um produto pelo código
+Produto buscarProduto(HeapMin *heap, int codigo)
+{
+  for (int i = 0; i < heap->tamanho; i++)
+  {
+    if (heap->itens[i].codigo == codigo)
+    {
+      return heap->itens[i];
+    }
+  }
+
+  printf("Produto com codigo %d não encontrado.\n", codigo);
+  exit(1);
+}
+
+// Função para listar todos os produtos
+void listarProdutos(HeapMin *heap)
+{
+  printf("Lista de Produtos:\n");
+  for (int i = 0; i < heap->tamanho; i++)
+  {
+    printf("Codigo: %d, Número de Serie: %s, Data de Validade: %s\n",
+           heap->itens[i].codigo, heap->itens[i].numero_serie, heap->itens[i].data_validade);
+  }
+}
+
+// Função para liberar a memória alocada para o Heap mínimo
+void liberarHeapMin(HeapMin *heap)
+{
+  free(heap->itens);
+  free(heap);
+}
+
+int main()
+{
+  setlocale(LC_ALL, "Portuguese_Brazil"); // Para adicionar acentos e ç em todo o código
+
+  HeapMin *heap = inicializarHeapMin(100);
+
+  int opcao;
+  do
+  {
+    printf("\nMenu:\n");
+    printf("1 - Incluir Produto\n");
+    printf("2 - Alterar Produto\n");
+    printf("3 - Excluir Produto\n");
+    printf("4 - Consultar Produto\n");
+    printf("5 - Listar Produtos\n");
+    printf("9 - Encerrar Programa\n");
+    printf("Escolha uma opcao: ");
+    scanf("%d", &opcao);
+
+    switch (opcao)
+    {
+    case 1:
+    {
+      printf("Incluir Produto:\n");
+      Produto produto;
+      printf("Codigo: ");
+      scanf("%d", &produto.codigo);
+      printf("Numero de Serie: ");
+      scanf("%s", produto.numero_serie);
+      printf("Data de Validade (DD/MM/AAAA): ");
+      scanf("%s", produto.data_validade);
+      inserirProduto(heap, produto);
+      printf("Produto incluido com sucesso!\n");
+      break;
+    }
+    case 2:
+    {
+      printf("Alterar Produto:\n");
+      int codigo;
+      printf("Informe o codigo do produto: ");
+      scanf("%d", &codigo);
+      // Buscar o produto pelo código
+      int indice_produto = -1;
+      for (int i = 0; i < heap->tamanho; i++)
+      {
+        if (heap->itens[i].codigo == codigo)
+        {
+          indice_produto = i;
+          break;
+        }
+      }
+      if (indice_produto != -1)
+      {
+        // Produto encontrado
+        printf("Produto encontrado:\n");
+
+        // Solicitar o número de série do produto específico a ser alterado
+        char numero_serie_alterar[51];
+        printf("Informe o número de serie do produto que deseja alterar (ou deixe em branco para não alterar): ");
+        scanf("%s", numero_serie_alterar);
+
+        // Buscar o produto pelo número de série
+        int indice_produto_especifico = -1;
+        for (int i = 0; i < heap->tamanho; i++)
+        {
+          if (strcmp(heap->itens[i].numero_serie, numero_serie_alterar) == 0)
+          {
+            indice_produto_especifico = i;
+            break;
+          }
+        }
+        if (indice_produto_especifico != -1)
+        {
+          // Produto específico encontrado
+          printf("Produto especifico encontrado:\n");
+          printf("Codigo: %d, Número de Serie: %s, Data de Validade: %s\n",
+                 heap->itens[indice_produto_especifico].codigo, heap->itens[indice_produto_especifico].numero_serie, heap->itens[indice_produto_especifico].data_validade);
+
+          // Solicitar as novas informações para o produto específico
+          printf("Informe os novos dados do produto especifico:\n");
+          printf("Novo Codigo (ou -1 para manter o mesmo): ");
+          scanf("%d", &heap->itens[indice_produto_especifico].codigo);
+          if (heap->itens[indice_produto_especifico].codigo == -1)
+          {
+            printf("Codigo mantido.\n");
+          }
+          else
+          {
+            printf("Nova Data de Validade (DD/MM/AAAA): ");
+            scanf("%s", heap->itens[indice_produto_especifico].data_validade);
+          }
+
+          printf("Novo Numero de Serie (ou deixe em branco para manter o mesmo): ");
+          char novo_numero_serie[51];
+          scanf("%s", novo_numero_serie);
+          if (strlen(novo_numero_serie) > 0)
+          {
+            strcpy(heap->itens[indice_produto_especifico].numero_serie, novo_numero_serie);
+          }
+          else
+          {
+            printf("Numero de serie mantido.\n");
+          }
+
+          printf("Produto especifico alterado com sucesso!\n");
+        }
+        else
+        {
+          printf("Produto com numero de serie %s não encontrado.\n", numero_serie_alterar);
+        }
+      }
+      else
+      {
+        printf("Produto com codigo %d não encontrado.\n", codigo);
+      }
+      break;
+    }
+
+    case 3:
+    {
+      printf("Excluir Produto:\n");
+      int codigo;
+      printf("Informe o codigo do produto: ");
+      scanf("%d", &codigo);
+
+      // Buscar todos os produtos com o código informado
+      printf("Produtos com o codigo %d:\n", codigo);
+      int quantidade_produtos = 0;
+      int indices_produtos[heap->tamanho];
+      for (int i = 0; i < heap->tamanho; i++)
+      {
+        if (heap->itens[i].codigo == codigo)
+        {
+          printf("Numero de Serie: %s, Data de Validade: %s\n",
+                 heap->itens[i].numero_serie, heap->itens[i].data_validade);
+          indices_produtos[quantidade_produtos] = i;
+          quantidade_produtos++;
+        }
+      }
+
+      if (quantidade_produtos == 0)
+      {
+        printf("Nenhum produto encontrado com o codigo %d.\n", codigo);
+        break;
+      }
+
+      // Encontrar o produto com vencimento mais próximo
+      int indice_produto_remover = indices_produtos[0];
+      for (int i = 1; i < quantidade_produtos; i++)
+      {
+        if (strcmp(heap->itens[indices_produtos[i]].data_validade, heap->itens[indice_produto_remover].data_validade) < 0)
+        {
+          indice_produto_remover = indices_produtos[i];
+        }
+      }
+
+      // Exibir o produto com vencimento mais próximo
+      printf("\nProduto com vencimento mais próximo:\n");
+      printf("Numero de Serie: %s, Data de Validade: %s\n",
+             heap->itens[indice_produto_remover].numero_serie, heap->itens[indice_produto_remover].data_validade);
+
+      // Pedir confirmação para excluir o produto
+      int opcao_excluir;
+      printf("Deseja excluir este produto? (1 = Sim, 2 = Nao): ");
+      scanf("%d", &opcao_excluir);
+      if (opcao_excluir == 1)
+      {
+        // Remover o produto
+        Produto produto_removido = heap->itens[indice_produto_remover];
+        printf("Produto removido:\n");
+        printf("Codigo: %d, Numero de Serie: %s, Data de Validade: %s\n",
+               produto_removido.codigo, produto_removido.numero_serie, produto_removido.data_validade);
+        // Remover o produto do heap
+        heap->itens[indice_produto_remover] = heap->itens[heap->tamanho - 1];
+        heap->tamanho--;
+      }
+      else if (opcao_excluir == 2)
+      {
+        printf("Operacao cancelada.\n");
+      }
+      else
+      {
+        printf("Opcao invalida.\n");
+      }
+      break;
+    }
+    case 4:
+    {
+      printf("Consultar Produto:\n");
+      int codigo;
+      printf("Informe o codigo do produto: ");
+      scanf("%d", &codigo);
+
+      // Buscar todos os produtos com o código informado
+      printf("Produtos com o codigo %d:\n", codigo);
+      int produtos_encontrados = 0;
+      for (int i = 0; i < heap->tamanho; i++)
+      {
+        if (heap->itens[i].codigo == codigo)
+        {
+          printf("Numero de Serie: %s, Data de Validade: %s\n",
+                 heap->itens[i].numero_serie, heap->itens[i].data_validade);
+          produtos_encontrados++;
+        }
+      }
+
+      if (produtos_encontrados == 0)
+      {
+        printf("Nenhum produto encontrado com o codigo %d.\n", codigo);
+      }
+      break;
+    }
+
+    case 5:
+    {
+      listarProdutos(heap);
+      break;
+    }
+    case 9:
+    {
+      printf("Encerrando programa...\n");
+      break;
+    }
+    default:
+      printf("Opcao invalida, tente novamente.\n"); // Adicionando para caso o usuário faça algo fora o normal no código
+    }
+  } while (opcao != 9);
+
+  liberarHeapMin(heap);
+  return 0;
+}
